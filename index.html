@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Destiny 2 — Weekly Pinnacle Tracker</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>D2 Weekly Pinnacle Tracker</h1>
+            <p class="subtitle">Was fehlt dir diese Woche noch?</p>
+        </header>
+
+        <section id="setup" class="card">
+            <h2>Setup</h2>
+            <div class="form-group">
+                <label for="apiKey">Bungie API Key</label>
+                <input type="password" id="apiKey" placeholder="Dein API Key von bungie.net/en/Application">
+                <small><a href="https://www.bungie.net/en/Application" target="_blank" rel="noopener">API Key erstellen &rarr;</a></small>
+            </div>
+            <div class="form-group">
+                <label for="bungieName">Bungie Name</label>
+                <input type="text" id="bungieName" placeholder="Guardian#1234">
+            </div>
+            <button id="searchBtn" onclick="app.search()">Suchen</button>
+        </section>
+
+        <section id="platform-select" class="card hidden">
+            <h2>Plattform wählen</h2>
+            <div id="platformList"></div>
+        </section>
+
+        <section id="character-select" class="card hidden">
+            <h2>Charakter wählen</h2>
+            <div id="characterList"></div>
+            <button class="secondary" onclick="app.checkAll()">Alle Charaktere prüfen</button>
+        </section>
+
+        <section id="results" class="card hidden">
+            <h2>Wöchentliche Pinnacles</h2>
+            <p id="resetInfo" class="reset-info"></p>
+            <div id="activityList"></div>
+        </section>
+
+        <section id="error" class="card error hidden">
+            <p id="errorMessage"></p>
+        </section>
+
+        <footer>
+            <p>Weekly Reset: Dienstag 19:00 MESZ &middot; Nicht von Bungie genehmigt</p>
+        </footer>
+    </div>
+
+    <script src="js/activities.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
