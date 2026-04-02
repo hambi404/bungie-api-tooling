@@ -8,19 +8,21 @@
  * Sources for hashes:
  *   - https://data.destinysets.com/
  *   - Bungie API Manifest: DestinyMilestoneDefinition
+ *
+ * rotating: true  → absent from API response means not active this week (skip)
+ * rotating: false → absent from API response means completed (mark done)
  */
 
 const PINNACLE_ACTIVITIES = {
     // ── Raids ───────────────────────────────────────────────
-    // Raid milestone hashes change each season when the featured raid rotates.
-    // The weekly featured raid milestone:
     '2712317338': { name: 'Wöchentlicher Raid', category: 'Raids', detail: 'Featured Raid abschließen' },
 
     // ── Dungeons ────────────────────────────────────────────
     '2594202463': { name: 'Wöchentlicher Dungeon', category: 'Dungeons', detail: 'Featured Dungeon abschließen' },
 
-    // ── Nightfall ───────────────────────────────────────────
+    // ── Vanguard ────────────────────────────────────────────
     '2029743966': { name: 'Nightfall', category: 'Vanguard', detail: 'Nightfall: The Ordeal abschließen' },
+    '3899487793': { name: 'Vanguard Ops', category: 'Vanguard', detail: 'Vanguard Ops Playlist abschließen' },
 
     // ── Crucible ────────────────────────────────────────────
     '3603098564': { name: 'Crucible Playlist', category: 'Crucible', detail: 'Crucible-Matches abschließen' },
@@ -28,14 +30,14 @@ const PINNACLE_ACTIVITIES = {
     // ── Gambit ──────────────────────────────────────────────
     '3448738070': { name: 'Gambit', category: 'Gambit', detail: 'Gambit-Matches abschließen' },
 
-    // ── Trials of Osiris ────────────────────────────────────
-    '3787826860': { name: 'Trials of Osiris', category: 'Trials', detail: 'Prüfungen von Osiris (Wochenende)' },
+    // ── Trials of Osiris (rotating — only active on weekends) ──
+    '3787826860': { name: 'Trials of Osiris', category: 'Trials', detail: 'Prüfungen von Osiris (Wochenende)', rotating: true },
 
     // ── Exotic Mission ──────────────────────────────────────
     '3021030893': { name: 'Exotische Mission', category: 'Missionen', detail: 'Wöchentliche exotische Mission' },
 
-    // ── Iron Banner (when active) ───────────────────────────
-    '3427325023': { name: 'Iron Banner', category: 'Events', detail: 'Iron Banner Bounties' },
+    // ── Iron Banner (rotating — only active during event weeks) ─
+    '3427325023': { name: 'Iron Banner', category: 'Events', detail: 'Iron Banner Matches abschließen', rotating: true },
 };
 
 /**
@@ -55,7 +57,10 @@ const ACTIVITY_CATEGORIES = [
 /**
  * Match API milestones against known pinnacle activities.
  *
- * @param {Object} milestones - Raw milestones from Bungie API (component 200)
+ * Bungie removes completed permanent milestones from the API response entirely.
+ * Rotating milestones are absent when not active this week.
+ *
+ * @param {Object} milestones - Raw milestones from Bungie API (component 202)
  * @returns {Array<{hash, name, category, detail, completed}>}
  */
 function matchPinnacles(milestones) {
@@ -63,22 +68,35 @@ function matchPinnacles(milestones) {
 
     for (const [hash, definition] of Object.entries(PINNACLE_ACTIVITIES)) {
         const milestone = milestones[hash];
-        let completed = false;
 
-        if (milestone && milestone.activities) {
-            completed = milestone.activities.some(a =>
-                a.phases
-                    ? a.phases.every(p => p.complete)
-                    : false
-            );
+        if (!milestone) {
+            if (definition.rotating) {
+                // Not active this week — skip entirely
+                continue;
+            }
+            // Permanent activity absent = already completed this week
+            results.push({
+                hash,
+                name: definition.name,
+                category: definition.category,
+                detail: definition.detail,
+                completed: true,
+            });
+            continue;
         }
 
-        // A milestone not present in the response means either completed
-        // or not available this week. We mark it as completed if absent
-        // but the milestone was available (some milestones rotate weekly).
-        if (!milestone) {
-            // Not available this week — skip
-            continue;
+        // Milestone is present — determine completion state
+        let completed = false;
+        if (milestone.activities && milestone.activities.length > 0) {
+            completed = milestone.activities.every(a => {
+                if (a.phases && a.phases.length > 0) {
+                    return a.phases.every(p => p.complete);
+                }
+                if (a.objectives && a.objectives.length > 0) {
+                    return a.objectives.every(o => o.complete);
+                }
+                return false;
+            });
         }
 
         results.push({
@@ -107,7 +125,6 @@ function groupByCategory(activities) {
         }
         grouped[act.category].push(act);
     }
-    // Remove empty categories
     for (const cat of Object.keys(grouped)) {
         if (grouped[cat].length === 0) {
             delete grouped[cat];
